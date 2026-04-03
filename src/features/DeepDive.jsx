@@ -32,7 +32,6 @@ export default function DeepDive({ onBack, sessionId, initialResearchQuestion = 
   const [loadingVisual, setLoadingVisual] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
-  const [visualFileUrl, setVisualFileUrl] = useState('')
   const [expandedCards, setExpandedCards] = useState({})
   const fileInputRef = useRef(null)
 
@@ -78,7 +77,6 @@ export default function DeepDive({ onBack, sessionId, initialResearchQuestion = 
     setLoading(true)
     setError('')
     setResult(null)
-    setVisualFileUrl('')
     setExpandedCards({})
 
     try {
@@ -145,7 +143,8 @@ export default function DeepDive({ onBack, sessionId, initialResearchQuestion = 
       const data = await response.json()
       if (data.error) throw new Error(data.error)
 
-      setVisualFileUrl(data.file_url || '')
+      // Open in new tab full screen
+      window.open(`${API_BASE}${data.file_url}`, '_blank')
     } catch (err) {
       setError(err.message || 'Could not generate the concept visual.')
     }
@@ -157,51 +156,12 @@ export default function DeepDive({ onBack, sessionId, initialResearchQuestion = 
     ? (textInput.trim() ? textInput.trim().split(/\s+/).length : 0)
     : 0
 
-  const rightPanel = (
-    <div style={styles.visualPanel}>
-      <div style={styles.visualHeader}>
-        <div>
-          <div style={styles.visualTitle}>Concept Flow</div>
-          <div style={styles.visualSubtitle}>Logical reading order visual</div>
-        </div>
-        {result?.cache_key && (
-          <button
-            onClick={handleGenerateVisual}
-            disabled={loadingVisual}
-            style={loadingVisual
-              ? { ...styles.visualButton, ...styles.buttonDisabled }
-              : styles.visualButton}
-          >
-            {loadingVisual ? 'Generating...' : 'Generate Visual'}
-          </button>
-        )}
-      </div>
-
-      {!visualFileUrl ? (
-        <div style={styles.visualEmpty}>
-          {result?.cache_key
-            ? 'Click Generate Visual to build the concept flow diagram.'
-            : 'The concept flow visual will appear here once QA pairs are generated.'}
-        </div>
-      ) : (
-        <div style={styles.visualScrollFrame}>
-          <iframe
-            title="Concept Flow Visual"
-            src={`${API_BASE}${visualFileUrl}`}
-            style={styles.iframe}
-          />
-        </div>
-      )}
-    </div>
-  )
-
   return (
     <FeatureLayout
       title={feature.title}
       onBack={onBack}
       infoCard={<FeatureInfoCard feature={feature} />}
-      showRightPanel={true}
-      rightPanel={rightPanel}
+      showRightPanel={false}
     >
       <div style={styles.wrapper}>
         <div style={styles.metaRow}>
@@ -355,6 +315,22 @@ export default function DeepDive({ onBack, sessionId, initialResearchQuestion = 
                 <div style={styles.statLabel}>Source Type</div>
               </div>
             </div>
+
+            {/* Visual Button */}
+            {result.cache_key && (
+              <div style={styles.visualRow}>
+                <button
+                  onClick={handleGenerateVisual}
+                  disabled={loadingVisual}
+                  style={loadingVisual
+                    ? { ...styles.visualButton, ...styles.buttonDisabled }
+                    : styles.visualButton}
+                >
+                  {loadingVisual ? 'Generating...' : '✦ Generate Concept Flow Visual'}
+                </button>
+                <div style={styles.visualHint}>Opens in a new tab</div>
+              </div>
+            )}
 
             {result.metadata && (
               <div style={styles.metadataCard}>
@@ -572,9 +548,7 @@ const styles = {
     alignItems: 'center',
     gap: '8px',
   },
-  uploadIcon: {
-    fontSize: '32px',
-  },
+  uploadIcon: { fontSize: '32px' },
   uploadText: {
     color: '#9ca3af',
     fontSize: '14px',
@@ -674,6 +648,26 @@ const styles = {
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
+  },
+  visualRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '14px',
+    flexWrap: 'wrap',
+  },
+  visualButton: {
+    background: '#06b6d4',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '10px',
+    padding: '12px 20px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+  },
+  visualHint: {
+    color: '#6b7280',
+    fontSize: '12px',
   },
   metadataCard: {
     background: '#0f1117',
@@ -819,78 +813,6 @@ const styles = {
     color: '#d1d5db',
     fontSize: '13px',
     lineHeight: '1.7',
-  },
-  visualPanel: {
-    background: '#1a1d25',
-    border: '1px solid #2a2d3a',
-    borderRadius: '16px',
-    padding: '16px',
-    height: '100%',
-    minHeight: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-    overflow: 'hidden',
-  },
-  visualHeader: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: '12px',
-    flexWrap: 'wrap',
-    flexShrink: 0,
-  },
-  visualTitle: {
-    color: '#f3f4f6',
-    fontSize: '16px',
-    fontWeight: '700',
-  },
-  visualSubtitle: {
-    color: '#9ca3af',
-    fontSize: '12px',
-    marginTop: '4px',
-  },
-  visualButton: {
-    background: '#06b6d4',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '10px',
-    padding: '10px 14px',
-    fontSize: '13px',
-    fontWeight: '600',
-    cursor: 'pointer',
-  },
-  visualEmpty: {
-    flex: 1,
-    border: '1px dashed #2a2d3a',
-    borderRadius: '12px',
-    color: '#9ca3af',
-    fontSize: '14px',
-    lineHeight: '1.7',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    textAlign: 'center',
-    padding: '18px',
-    minHeight: '520px',
-  },
-  visualScrollFrame: {
-    flex: 1,
-    minHeight: '720px',
-    overflowX: 'auto',
-    overflowY: 'auto',
-    border: '1px solid #2a2d3a',
-    borderRadius: '12px',
-    background: '#0f1117',
-  },
-  iframe: {
-    display: 'block',
-    width: '1400px',
-    minWidth: '100%',
-    height: '100%',
-    minHeight: '720px',
-    border: 'none',
-    background: '#0f1117',
   },
 }
 

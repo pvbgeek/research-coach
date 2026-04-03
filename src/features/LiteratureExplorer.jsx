@@ -15,7 +15,6 @@ export default function LiteratureExplorer({
 
   const [researchQuestion, setResearchQuestion] = useState(initialResearchQuestion)
   const [searchResult, setSearchResult] = useState(null)
-  const [visualFileUrl, setVisualFileUrl] = useState('')
   const [loadingSearch, setLoadingSearch] = useState(false)
   const [loadingVisual, setLoadingVisual] = useState(false)
   const [error, setError] = useState('')
@@ -33,7 +32,6 @@ export default function LiteratureExplorer({
     setLoadingSearch(true)
     setError('')
     setSearchResult(null)
-    setVisualFileUrl('')
 
     try {
       const response = await fetch(`${API_BASE}/feature2/search`, {
@@ -50,7 +48,12 @@ export default function LiteratureExplorer({
       }
 
       const data = await response.json()
-      setSearchResult(data)
+
+      if (data.error) {
+        setError(data.error)
+      } else {
+        setSearchResult(data)
+      }
     } catch (err) {
       setError('Could not search papers right now. Please check your backend connection and try again.')
     }
@@ -63,7 +66,6 @@ export default function LiteratureExplorer({
 
     setLoadingVisual(true)
     setError('')
-    setVisualFileUrl('')
 
     try {
       const response = await fetch(`${API_BASE}/feature2/visual`, {
@@ -84,7 +86,8 @@ export default function LiteratureExplorer({
         throw new Error(data.error)
       }
 
-      setVisualFileUrl(data.file_url || '')
+      // Open in new tab full screen
+      window.open(`${API_BASE}${data.file_url}`, '_blank')
     } catch (err) {
       setError(err.message || 'Could not generate the visual timeline.')
     }
@@ -92,54 +95,12 @@ export default function LiteratureExplorer({
     setLoadingVisual(false)
   }
 
-  const rightPanel = (
-    <div style={styles.visualPanel}>
-      <div style={styles.visualHeader}>
-        <div>
-          <div style={styles.visualTitle}>Timeline Visual</div>
-          <div style={styles.visualSubtitle}>
-            Field evolution view
-          </div>
-        </div>
-
-        {searchResult?.has_visual && (
-          <button
-            onClick={handleGenerateVisual}
-            disabled={loadingVisual}
-            style={loadingVisual
-              ? { ...styles.visualButton, ...styles.buttonDisabled }
-              : styles.visualButton}
-          >
-            {loadingVisual ? 'Generating...' : 'Generate Visual Timeline'}
-          </button>
-        )}
-      </div>
-
-      {!visualFileUrl ? (
-        <div style={styles.visualEmpty}>
-          {searchResult?.has_visual
-            ? 'Generate the timeline to view the visual progression of papers.'
-            : 'The visual timeline will appear here once results are available.'}
-        </div>
-      ) : (
-        <div style={styles.visualScrollFrame}>
-          <iframe
-            title="Feature 2 Timeline Visual"
-            src={`${API_BASE}${visualFileUrl}`}
-            style={styles.iframe}
-          />
-        </div>
-      )}
-    </div>
-  )
-
   return (
     <FeatureLayout
       title={feature.title}
       onBack={onBack}
       infoCard={<FeatureInfoCard feature={feature} />}
-      showRightPanel={true}
-      rightPanel={rightPanel}
+      showRightPanel={false}
     >
       <div style={styles.wrapper}>
         <div style={styles.metaRow}>
@@ -148,11 +109,11 @@ export default function LiteratureExplorer({
         </div>
 
         <div style={styles.inputCard}>
-          <div style={styles.sectionTitle}>Research Question</div>
+          <div style={styles.sectionTitle}>Research Question or Topic</div>
           <textarea
             value={researchQuestion}
             onChange={(e) => setResearchQuestion(e.target.value)}
-            placeholder="Enter your research question here..."
+            placeholder="Enter your research question or topic here..."
             style={styles.textarea}
             disabled={loadingSearch}
           />
@@ -185,7 +146,20 @@ export default function LiteratureExplorer({
         {searchResult && (
           <>
             <div style={styles.resultCard}>
-              <div style={styles.sectionTitle}>Search Summary</div>
+              <div style={styles.resultHeader}>
+                <div style={styles.sectionTitle}>Search Summary</div>
+                {searchResult.has_visual && (
+                  <button
+                    onClick={handleGenerateVisual}
+                    disabled={loadingVisual}
+                    style={loadingVisual
+                      ? { ...styles.visualButton, ...styles.buttonDisabled }
+                      : styles.visualButton}
+                  >
+                    {loadingVisual ? 'Generating...' : '✦ Generate Visual Timeline'}
+                  </button>
+                )}
+              </div>
 
               <div style={styles.block}>
                 <div style={styles.smallLabel}>Research Question</div>
@@ -391,6 +365,25 @@ const styles = {
     borderRadius: '14px',
     padding: '18px',
   },
+  resultHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px',
+    flexWrap: 'wrap',
+    marginBottom: '16px',
+  },
+  visualButton: {
+    background: '#06b6d4',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '10px',
+    padding: '10px 16px',
+    fontSize: '13px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  },
   block: {
     marginBottom: '14px',
   },
@@ -508,78 +501,6 @@ const styles = {
     fontSize: '13px',
     fontWeight: '600',
     textDecoration: 'none',
-  },
-  visualPanel: {
-    background: '#1a1d25',
-    border: '1px solid #2a2d3a',
-    borderRadius: '16px',
-    padding: '16px',
-    height: '100%',
-    minHeight: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-    overflow: 'hidden',
-  },
-  visualHeader: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: '12px',
-    flexWrap: 'wrap',
-    flexShrink: 0,
-  },
-  visualTitle: {
-    color: '#f3f4f6',
-    fontSize: '16px',
-    fontWeight: '700',
-  },
-  visualSubtitle: {
-    color: '#9ca3af',
-    fontSize: '12px',
-    marginTop: '4px',
-  },
-  visualButton: {
-    background: '#06b6d4',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '10px',
-    padding: '10px 14px',
-    fontSize: '13px',
-    fontWeight: '600',
-    cursor: 'pointer',
-  },
-  visualEmpty: {
-    flex: 1,
-    border: '1px dashed #2a2d3a',
-    borderRadius: '12px',
-    color: '#9ca3af',
-    fontSize: '14px',
-    lineHeight: '1.7',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    textAlign: 'center',
-    padding: '18px',
-    minHeight: '520px',
-  },
-  visualScrollFrame: {
-    flex: 1,
-    minHeight: '720px',
-    overflowX: 'auto',
-    overflowY: 'auto',
-    border: '1px solid #2a2d3a',
-    borderRadius: '12px',
-    background: '#0f1117',
-  },
-  iframe: {
-    display: 'block',
-    width: '1400px',
-    minWidth: '100%',
-    height: '100%',
-    minHeight: '720px',
-    border: 'none',
-    background: '#0f1117',
   },
 }
 
